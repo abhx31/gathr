@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Adjust to your database
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(uuid())
+  name         String
+  email        String          @unique
+  password     String
+  role         Role            @default(ATTENDEE) // Either HOST or ATTENDEE
+  createdTrips Trip[]          @relation("HostTrips")
+  joinedTrips  TripAttendees[] // Connect to the join table
+}
+
+model Trip {
+  id          String          @id @default(uuid())
+  title       String
+  description String
+  price       Decimal         @db.Decimal(10, 2)
+  randomKey   String          @unique
+  hostId      String
+  host        User            @relation("HostTrips", fields: [hostId], references: [id])
+  attendees   TripAttendees[] // Connect to the join table
+  images      Image[]
+}
+
+model TripAttendees {
+  id     String @id @default(uuid()) // Use UUID for the join table
+  userId String
+  tripId String
+
+  user User @relation(fields: [userId], references: [id])
+  trip Trip @relation(fields: [tripId], references: [id])
+
+  @@unique([userId, tripId]) // Prevent duplicate entries
+}
+
+model Image {
+  id     String @id @default(uuid())
+  url    String // Store the URL or file path of the image
+  tripId String // Foreign key for the Trip model
+
+  trip Trip @relation(fields: [tripId], references: [id])
+
+  @@index([tripId]) // Add an index for better query performance
+}
+
+enum Role {
+  HOST
+  ATTENDEE
+}
